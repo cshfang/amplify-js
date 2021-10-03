@@ -14,12 +14,15 @@
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import { InAppMessage, InAppMessaging } from '@aws-amplify/notifications';
 
+import { InAppMessageComponents } from '..';
 import InAppMessagingContext from './InAppMessagingContext';
 
 export default function InAppMessagingProvider({
 	children,
+	components = {},
 }: {
 	children: ReactNode;
+	components?: InAppMessageComponents;
 }) {
 	const [inAppMessages, setInAppMessages] = useState<InAppMessage[]>([]);
 
@@ -39,6 +42,7 @@ export default function InAppMessagingProvider({
 		<InAppMessagingContext.Provider
 			value={{
 				clearInAppMessages,
+				components,
 				displayInAppMessage,
 				inAppMessages,
 			}}
