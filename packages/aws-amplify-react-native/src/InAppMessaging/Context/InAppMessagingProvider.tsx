@@ -12,17 +12,19 @@
  */
 
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
-import { Notifications } from 'aws-amplify';
+import { Notifications, InAppMessage } from '@aws-amplify/notifications';
 
+import { InAppMessageComponents } from '..';
 import InAppMessagingContext from './InAppMessagingContext';
 
-// TODO: replace generic T with InAppMessage from Notifications lib
-export default function InAppMessagingProvider<T = unknown>({
+export default function InAppMessagingProvider({
 	children,
+	components = {},
 }: {
 	children: ReactNode;
+	components?: InAppMessageComponents;
 }) {
-	const [inAppMessages, setInAppMessages] = useState<T[]>([]);
+	const [inAppMessages, setInAppMessages] = useState<InAppMessage[]>([]);
 
 	useEffect(() => {
 		Notifications.setInAppMessagesHandler(setInAppMessages);
@@ -32,7 +34,7 @@ export default function InAppMessagingProvider<T = unknown>({
 		setInAppMessages([]);
 	}, []);
 
-	const displayInAppMessage = useCallback((inAppMessage: T) => {
+	const displayInAppMessage = useCallback((inAppMessage: InAppMessage) => {
 		setInAppMessages([inAppMessage]);
 	}, []);
 
@@ -40,6 +42,7 @@ export default function InAppMessagingProvider<T = unknown>({
 		<InAppMessagingContext.Provider
 			value={{
 				clearInAppMessages,
+				components,
 				displayInAppMessage,
 				inAppMessages,
 			}}
