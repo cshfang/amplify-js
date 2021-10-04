@@ -63,6 +63,7 @@ export interface InAppMessageContentProps
 }
 
 interface InAppMessageBaseComponentProps extends InAppMessageContentProps {
+	id: string;
 	onClose?: () => void;
 	style?: InAppMessageComponentStyle;
 }
@@ -71,10 +72,9 @@ export interface BannerMessageProps extends InAppMessageBaseComponentProps {
 	position: InAppMessagePosition;
 }
 
-export interface CarouselMessageProps {
+export interface CarouselMessageProps
+	extends Omit<InAppMessageBaseComponentProps, 'content'> {
 	data: InAppMessageContentProps[];
-	onClose?: InAppMessageBaseComponentProps['onClose'];
-	style?: InAppMessageBaseComponentProps['style'];
 }
 
 export interface FullScreenMessageProps
