@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2017-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -20,7 +20,9 @@ import { getLineHeight } from './utils';
 
 // color
 export const COLOR_BLACK = '#000';
+export const COLOR_GREY = '#a1a1a1';
 export const COLOR_LIGHT_GREY = '#e8e8e8';
+export const COLOR_LIGHT_GREY_2 = '#d8d8d8';
 export const COLOR_WHITE = '#fff';
 
 // spacing

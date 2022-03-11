@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2017-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -28,6 +28,8 @@ export type InAppMessageComponentStyle = {
 	container?: StyleProp<ViewStyle>;
 	header?: StyleProp<TextStyle>;
 	image?: StyleProp<ImageStyle>;
+	pageIndicatorActive?: StyleProp<ViewStyle>;
+	pageIndicatorInactive?: StyleProp<ViewStyle>;
 	primaryButton?: InAppMessageComponentButtonStyle;
 	secondaryButton?: InAppMessageComponentButtonStyle;
 };
@@ -51,12 +53,16 @@ export interface InAppMessageComponentContentProps
 	secondaryButton?: InAppMessageComponentButtonProps;
 }
 
-export interface InAppMessageComponentBaseProps extends InAppMessageComponentContentProps {
+export interface InAppMessageComponentCommonProps {
 	layout: InAppMessageLayout;
 	onClose?: () => void;
 	onDisplay?: () => void;
 	style?: InAppMessageComponentStyle;
 }
+
+export interface InAppMessageComponentBaseProps
+	extends InAppMessageComponentCommonProps,
+		InAppMessageComponentContentProps {}
 
 export interface InAppMessageComponentBaseStyle {
 	body: TextStyle;
@@ -70,5 +76,7 @@ export interface InAppMessageComponentBaseStyle {
 	iconButton: ViewStyle;
 	image: ImageStyle;
 	imageContainer: ViewStyle;
+	pageIndicatorActive?: ViewStyle;
+	pageIndicatorInactive?: ViewStyle;
 	textContainer: ViewStyle;
 }

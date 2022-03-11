@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2017-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import isEmpty from 'lodash/isEmpty';
 
 import useMessageImage from '../useMessageImage';
-import { InAppMessageComponentProps } from '../useMessage';
+import { InAppMessageComponentBaseProps } from '../../types';
 
 import { getMessageStyle, getMessageStyleProps } from './utils';
 import { GetDefaultStyle, UseMessageProps } from './types';
@@ -31,7 +31,7 @@ import { GetDefaultStyle, UseMessageProps } from './types';
  */
 
 export default function useMessageProps(
-	props: InAppMessageComponentProps,
+	props: InAppMessageComponentBaseProps,
 	getDefaultStyle: GetDefaultStyle
 ): UseMessageProps {
 	const { image, layout, onDisplay, primaryButton, secondaryButton } = props;
