@@ -13,12 +13,12 @@ const logger = new Logger('Notifications');
 
 class NotificationsClass {
 	private config: Record<string, any> = {};
+	private configured = false;
 	private inAppMessaging: InAppMessaging;
 	private pushNotification?: PushNotification;
 
 	constructor() {
 		this.inAppMessaging = new InAppMessagingClass();
-		this.pushNotification = new PushNotificationClass();
 	}
 
 	/**
@@ -43,6 +43,11 @@ class NotificationsClass {
 
 		if (this.config.Push) {
 			try {
+				// some configuration steps should not be re-run even if re-configured for some reason
+				if (!this.configured) {
+					this.pushNotification = new PushNotificationClass();
+					this.configured = true;
+				}
 				this.pushNotification.configure(this.config.Push);
 			} catch (err) {
 				logger.error(err);
