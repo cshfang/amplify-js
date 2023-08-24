@@ -33,9 +33,9 @@ import { openAuthSession } from '../../../utils';
  *
  * TODO: add config errors
  */
-export async function signInWithRedirect(
+export const signInWithRedirect = async (
 	signInWithRedirectRequest?: SignInWithRedirectRequest
-): Promise<void> {
+): Promise<void> => {
 	const authConfig = Amplify.getConfig().Auth?.Cognito;
 	assertTokenProviderConfig(authConfig);
 	assertOAuthConfig(authConfig);
@@ -49,17 +49,17 @@ export async function signInWithRedirect(
 		provider = signInWithRedirectRequest.provider.custom;
 	}
 
-	oauthSignIn({
+	return oauthSignIn({
 		oauthConfig: authConfig.loginWith.oauth,
 		clientId: authConfig.userPoolClientId,
 		provider,
 		customState: signInWithRedirectRequest?.customState,
 	});
-}
+};
 
 const store = new DefaultOAuthStore(defaultStorage);
 
-function oauthSignIn({
+export const oauthSignIn = async ({
 	oauthConfig,
 	provider,
 	clientId,
@@ -69,7 +69,8 @@ function oauthSignIn({
 	provider: string;
 	clientId: string;
 	customState?: string;
-}) {
+}) => {
+	const { domain, redirectSignIn, responseType, scopes } = oauthConfig;
 	const generatedState = generateState(32);
 
 	/* encodeURIComponent is not URL safe, use urlSafeEncode instead. Cognito 
@@ -91,25 +92,36 @@ function oauthSignIn({
 	const code_challenge = generateChallenge(pkce_key);
 	const code_challenge_method = 'S256';
 
-	const scopesString = oauthConfig.scopes.join(' ');
+	const scopesString = scopes.join(' ');
 
 	const queryString = Object.entries({
-		redirect_uri: oauthConfig.redirectSignIn[0], // TODO(v6): add logic to identity the correct url
-		response_type: oauthConfig.responseType,
+		redirect_uri: redirectSignIn[0], // TODO(v6): add logic to identity the correct url
+		response_type: responseType,
 		client_id: clientId,
 		identity_provider: provider,
 		scope: scopesString,
 		state,
-		...(oauthConfig.responseType === 'code' ? { code_challenge } : {}),
-		...(oauthConfig.responseType === 'code' ? { code_challenge_method } : {}),
+		...(responseType === 'code'
+			? { code_challenge, code_challenge_method }
+			: {}),
 	})
 		.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
 		.join('&');
 
 	// TODO(v6): use URL object instead
-	const url = `https://${oauthConfig.domain}/oauth2/authorize?${queryString}`;
-	openAuthSession(url, oauthConfig.redirectSignIn);
-}
+	const oAuthUrl = `https://${domain}/oauth2/authorize?${queryString}`;
+	const { type, url } = (await openAuthSession(oAuthUrl, redirectSignIn)) ?? {};
+	if (type === 'success' && url) {
+		handleAuthResponse({
+			currentUrl: url,
+			clientId,
+			domain,
+			redirectUri: redirectSignIn[0],
+			responseType,
+			userAgentValue: getAmplifyUserAgent(),
+		});
+	}
+};
 
 async function handleCodeFlow({
 	currentUrl,
@@ -214,35 +226,25 @@ async function handleCodeFlow({
 	await store.storeOAuthSignIn(true);
 
 	Hub.dispatch('auth', { event: 'signInWithRedirect' }, 'Auth', AMPLIFY_SYMBOL);
-	clearHistory(redirectUri);
 	invokeAndClearPromise();
 	return;
 }
 
-async function handleImplicitFlow({
-	currentUrl,
-	redirectUri,
-}: {
-	currentUrl: string;
-	redirectUri: string;
-}) {
-	// hash is `null` if `#` doesn't exist on URL
-
+async function handleImplicitFlow({ currentUrl }: { currentUrl: string }) {
 	const url = new URL(currentUrl);
-
-	const { id_token, access_token, state, token_type, expires_in } = (
-		url.hash || '#'
-	)
-		.substr(1) // Remove # from returned code
-		.split('&')
-		.map(pairings => pairings.split('='))
-		.reduce((accum, [k, v]) => ({ ...accum, [k]: v }), {
-			id_token: undefined,
-			access_token: undefined,
-			state: undefined,
-			token_type: undefined,
-			expires_in: undefined,
-		});
+	const { id_token, access_token, state, token_type, expires_in } =
+		// hash is `null` if `#` doesn't exist on URL
+		(url.hash || '#')
+			.substring(1) // Remove # from returned code
+			.split('&')
+			.map(pairings => pairings.split('='))
+			.reduce((accum, [k, v]) => ({ ...accum, [k]: v }), {
+				id_token: undefined,
+				access_token: undefined,
+				state: undefined,
+				token_type: undefined,
+				expires_in: undefined,
+			});
 
 	await store.clearOAuthInflightData();
 	try {
@@ -255,14 +257,13 @@ async function handleImplicitFlow({
 	await cacheCognitoTokens({
 		AccessToken: access_token,
 		IdToken: id_token,
-		RefreshToken: undefined,
 		TokenType: token_type,
 		ExpiresIn: expires_in,
 	});
 
 	await store.storeOAuthSignIn(true);
 	Hub.dispatch('auth', { event: 'signInWithRedirect' }, 'Auth', AMPLIFY_SYMBOL);
-	clearHistory(redirectUri);
+
 	invokeAndClearPromise();
 }
 
@@ -310,10 +311,7 @@ async function handleAuthResponse({
 				domain,
 			});
 		} else {
-			return await handleImplicitFlow({
-				currentUrl,
-				redirectUri,
-			});
+			return await handleImplicitFlow({ currentUrl });
 		}
 	} catch (e) {
 		throw e;
@@ -346,55 +344,6 @@ function validateState(state?: string | null): asserts state {
 	}
 }
 
-async function parseRedirectURL() {
-	const authConfig = Amplify.getConfig().Auth?.Cognito;
-	try {
-		assertTokenProviderConfig(authConfig);
-		store.setAuthConfig(authConfig);
-	} catch (_err) {
-		// Token provider not configure nothing to do
-		return;
-	}
-
-	// No OAuth inflight doesnt need to parse the url
-	if (!(await store.loadOAuthInFlight())) {
-		return;
-	}
-	try {
-		assertOAuthConfig(authConfig);
-	} catch (err) {
-		// TODO(v6): this should warn you have signInWithRedirect but is not configured
-		return;
-	}
-
-	try {
-		const url = window.location.href;
-
-		handleAuthResponse({
-			currentUrl: url,
-			clientId: authConfig.userPoolClientId,
-			domain: authConfig.loginWith.oauth.domain,
-			redirectUri: authConfig.loginWith.oauth.redirectSignIn[0],
-			responseType: authConfig.loginWith.oauth.responseType,
-			userAgentValue: getAmplifyUserAgent(),
-		});
-	} catch (err) {
-		// is ok if there is not OAuthConfig
-	}
-}
-
-function urlListener() {
-	// Listen configure to parse url
-	parseRedirectURL();
-	Hub.listen('core', async capsule => {
-		if (capsule.payload.event === 'configure') {
-			parseRedirectURL();
-		}
-	});
-}
-
-urlListener();
-
 // This has a reference for listeners that requires to be notified, TokenOrchestrator use this for load tokens
 let resolveInflightPromise = () => {};
 
@@ -413,8 +362,3 @@ CognitoUserPoolsTokenProvider.setWaitForInflightOAuth(
 			return;
 		})
 );
-function clearHistory(redirectUri: string) {
-	if (window && typeof window.history !== 'undefined') {
-		window.history.replaceState({}, '', redirectUri);
-	}
-}

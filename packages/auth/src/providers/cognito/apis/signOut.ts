@@ -9,6 +9,7 @@ import {
 } from '@aws-amplify/core';
 import { SignOutRequest } from '../../../types/requests';
 import { AuthSignOutResult } from '../../../types/results';
+import { openAuthSession } from '../../../utils';
 import { DefaultOAuthStore } from '../utils/signInWithRedirectStore';
 import { tokenOrchestrator } from '../tokenProvider';
 import {
@@ -25,8 +26,6 @@ import {
 	assertAuthTokens,
 	assertAuthTokensWithRefreshToken,
 } from '../utils/types';
-
-const SELF = '_self';
 
 /**
  * Signs a user out
@@ -112,18 +111,18 @@ async function handleOAuthSignOut(cognitoConfig: CognitoUserPoolConfig) {
 	oauthStore.clearOAuthData();
 
 	if (isOAuthSignIn) {
-		oAuthSignOutRedirect(cognitoConfig);
+		return oAuthSignOutRedirect(cognitoConfig);
 	}
 }
 
-function oAuthSignOutRedirect(authConfig: CognitoUserPoolConfig) {
+async function oAuthSignOutRedirect(authConfig: CognitoUserPoolConfig) {
 	assertOAuthConfig(authConfig);
-	let oAuthLogoutEndpoint =
-		'https://' + authConfig.loginWith.oauth.domain + '/logout?';
+	const { domain, redirectSignOut } = authConfig.loginWith.oauth;
+
+	let oAuthLogoutEndpoint = `https://${domain}/logout?`;
 
 	const client_id = authConfig.userPoolClientId;
-
-	const signout_uri = authConfig.loginWith.oauth.redirectSignOut[0];
+	const signout_uri = redirectSignOut[0];
 
 	oAuthLogoutEndpoint += Object.entries({
 		client_id,
@@ -139,7 +138,7 @@ function oAuthSignOutRedirect(authConfig: CognitoUserPoolConfig) {
 	// );
 	// logger.debug(`Signing out from ${oAuthLogoutEndpoint}`);
 
-	window.open(oAuthLogoutEndpoint, SELF);
+	await openAuthSession(oAuthLogoutEndpoint, redirectSignOut);
 }
 
 function isSessionRevocable(token: JWT) {

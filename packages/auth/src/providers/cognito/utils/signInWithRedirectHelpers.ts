@@ -1,7 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+import { browserOrNode } from '@aws-amplify/core/internals/utils';
 import { Sha256 } from '@aws-crypto/sha256-js';
+
+// TODO(v6): extract to core and @aws-amplify/react-native
+let btoaImpl: typeof btoa;
+if (browserOrNode().isBrowser) {
+	btoaImpl = btoa;
+} else {
+	btoaImpl = require('core-js-pure/stable/btoa');
+}
 
 export function bufferToString(buffer: Uint8Array) {
 	const CHARSET =
@@ -57,5 +66,5 @@ export function base64URL(stringUrl: string): string {
 
 function bytesToBase64(bytes: Uint8Array) {
 	const binString = Array.from(bytes, x => String.fromCodePoint(x)).join('');
-	return btoa(binString);
+	return btoaImpl(binString);
 }

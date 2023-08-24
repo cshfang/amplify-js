@@ -1,6 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+import { browserOrNode } from '../../../libraryUtils';
 import { asserts } from '../../../Util/errors/AssertError';
+
+// TODO(v6): extract to core and @aws-amplify/react-native
+let atobImpl: typeof atob;
+if (browserOrNode().isBrowser) {
+	atobImpl = atob;
+} else {
+	atobImpl = require('core-js-pure/stable/atob');
+}
 
 import {
 	AuthConfig,
@@ -104,6 +113,6 @@ export function decodeJWT(token: string): JWT {
 }
 
 function base64ToBytes(base64: string): Uint8Array {
-	const binString = atob(base64);
+	const binString = atobImpl(base64);
 	return Uint8Array.from(binString, m => m.codePointAt(0) || 0);
 }
