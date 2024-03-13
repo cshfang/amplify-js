@@ -13,3 +13,4 @@ export {
 	loadBase64,
 	loadAppState,
 } from './moduleLoaders';
+export { setAsyncStorageOverride } from './moduleOverrides';

@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AsyncStorageStatic } from '@react-native-async-storage/async-storage';
+import { getAsyncStorageOverride } from '../moduleOverrides/asyncStorageOverride';
 
 export const loadAsyncStorage = (): AsyncStorageStatic => {
 	try {
+		const override = getAsyncStorageOverride();
+		if (override) {
+			return override;
+		}
 		// metro bundler requires static string for loading module.
 		// See: https://facebook.github.io/metro/docs/configuration/#dynamicdepsinpackages
 		const module = require('@react-native-async-storage/async-storage')
